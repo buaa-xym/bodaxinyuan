@@ -274,6 +274,11 @@ def check_once(token: str) -> bool:
     state = load_state()
     snapshot = {}   # 本轮最新状态: {status: {projectName: isFull_bool}}
     problems = []
+    # 冷启动判定：state 里还没有任何基线数据（首次运行 / state 被清空），或 token 刚更新过
+    _meta0 = state.get("_meta") if isinstance(state.get("_meta"), dict) else {}
+    _tok_fp = (token or "")[:16]
+    token_changed = bool(_meta0.get("token_fp")) and _meta0.get("token_fp") != _tok_fp
+    cold_start = (not any(isinstance(state.get(st), dict) and state.get(st) for st in STUDENT_STATUSES)) or token_changed
 
     for st in STUDENT_STATUSES:
         label = STATUS_NAMES.get(st, st)
@@ -310,8 +315,6 @@ def check_once(token: str) -> bool:
         # 逐个输出项目名字及满/空状态
         for name, is_full in snapshot[st].items():
             log(f"    - {name} [{'已满' if is_full else '未满(有房)'}]")
-        if projects and not prev:
-            log(f"  （首轮记录基线：{label} 当前 {'有' if available_now else '无'}空房）")
 
         if newly_available:
             notify(
@@ -319,6 +322,21 @@ def check_once(token: str) -> bool:
                 "以下项目刚刚从\"已满\"变为\"未满\"：\n" + "\n".join(newly_available)
                 + f"\n\n快去申请：{ORIGIN}/?v=1792906247546#/pages/my/apply/application-sub",
             )
+
+    # ---- 启动通知：仅冷启动（首次运行/状态被清空）时发一次 ----
+    if cold_start and snapshot:
+        lines = []
+        for st in STUDENT_STATUSES:
+            label = STATUS_NAMES.get(st, st)
+            cur = snapshot.get(st, {})
+            if not cur:
+                continue
+            avail = [n for n, f in cur.items() if not f]
+            lines.append(f"- {label}: " + ("、".join(avail) if avail else "全部已满"))
+        notify("🚀 房源监控已启动",
+               "已记录当前基线状态：\n" + "\n".join(lines)
+               + "\n\n之后仅在放房、每天日报或 token 失效时推送。")
+        log("已发送启动通知")
 
     if problems:
         log("本轮存在异常: " + "; ".join(problems))
@@ -332,6 +350,7 @@ def check_once(token: str) -> bool:
     if meta.get("date") != today:
         meta = {"date": today, "count": 0, "last_report": ""}
     meta["count"] = meta.get("count", 0) + 1
+    meta["token_fp"] = _tok_fp
     state["_meta"] = meta
 
     if now_cst().strftime("%H:%M") >= DAILY_REPORT_TIME and meta.get("last_report") != today:
