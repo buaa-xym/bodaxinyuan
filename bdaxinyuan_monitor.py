@@ -198,18 +198,23 @@ def load_profile(token: str) -> tuple:
             data = {}
     if data.get("birthday") and data.get("gender"):
         return data["birthday"], data["gender"]
-    try:
-        info = api_post("/customer/customer/applet/get_customer_info",
-                        {"tenantId": TENANT_ID}, token=token)
-        if info.get("code") == "200" and info.get("data"):
-            d = info["data"]
-            data["birthday"] = d.get("birthday") or ""
-            data["gender"] = d.get("gender") or ""   # 字典编码，如 GC0048001
-            with open(TOKEN_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=1)
-            return data["birthday"], data["gender"]
-    except Exception:
-        pass
+    last_err = "未知"
+    for _ in range(2):   # 失败重试一次，避免偶发网络抖动
+        try:
+            info = api_post("/customer/customer/applet/get_customer_info",
+                            {"tenantId": TENANT_ID}, token=token)
+            if info.get("code") == "200" and info.get("data"):
+                d = info["data"]
+                data["birthday"] = d.get("birthday") or ""
+                data["gender"] = d.get("gender") or ""   # 字典编码，如 GC0048001
+                with open(TOKEN_FILE, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=1)
+                return data["birthday"], data["gender"]
+            last_err = f"code={info.get('code')} msg={info.get('msg')}"
+        except Exception as e:
+            last_err = repr(e)
+        time.sleep(1)
+    log(f"读取账号资料失败（{last_err}）")
     return "", ""
 
 
@@ -383,8 +388,8 @@ def main():
         sys.exit(1)
 
     if "--once" in sys.argv:
-        check_once(token)
-        return
+        # 必须把失败向上传递，否则 Actions 会显示成功但实际没跑出数据
+        sys.exit(0 if check_once(token) else 1)
 
     log(f"开始监控博大新元房源，每 {INTERVAL_MINUTES} 分钟检查一次（Ctrl+C 停止）...")
     while True:
