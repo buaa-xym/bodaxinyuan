@@ -174,3 +174,5 @@
 [2026-11-14 10:58:13] 无法获取账号资料（生日/性别），请重新登录: python bdaxinyuan_monitor.py --login
 [2026-11-14 16:54:53] 读取账号资料失败（ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='qnrc.bdalife.cn', port=443): Max retries exceeded with url: /api/customer/customer/applet/get_customer_info (Caused by ConnectTimeoutError(<HTTPSConnection(host='qnrc.bdalife.cn', port=443) at 0x7c890e7f2900>, 'Connection to qnrc.bdalife.cn timed out. (connect timeout=30)'))"))）
 [2026-11-14 16:54:53] 无法获取账号资料（生日/性别），请重新登录: python bdaxinyuan_monitor.py --login
+[2026-11-14 21:07:49] 读取账号资料失败（ConnectTimeout(MaxRetryError("HTTPSConnectionPool(host='qnrc.bdalife.cn', port=443): Max retries exceeded with url: /api/customer/customer/applet/get_customer_info (Caused by ConnectTimeoutError(<HTTPSConnection(host='qnrc.bdalife.cn', port=443) at 0x71170c722780>, 'Connection to qnrc.bdalife.cn timed out. (connect timeout=30)'))"))）
+[2026-11-14 21:07:49] 无法获取账号资料（生日/性别），请重新登录: python bdaxinyuan_monitor.py --login
